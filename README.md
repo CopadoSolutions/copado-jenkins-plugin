@@ -20,5 +20,3 @@ With this plugin you can add a build step to your Jenkins project that executes 
 
 ## Change Log
 2015-Nov-16: First release
-
-
