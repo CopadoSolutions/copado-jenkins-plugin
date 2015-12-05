@@ -11,7 +11,7 @@
   </parent>
   <groupId>com.copado.jenkins</groupId>
   <artifactId>copado</artifactId>
-  <version>1.00-SNAPSHOT</version>
+  <version>1.00</version>
   <packaging>hpi</packaging>
 
   <name>Copado plugin</name>
@@ -34,7 +34,7 @@
     <connection>scm:git:git://github.com/jenkinsci/copado-plugin.git</connection>
     <developerConnection>scm:git:git@github.com:jenkinsci/copado-plugin.git</developerConnection>
     <url>https://github.com/jenkinsci/copado-plugin</url>
-    <tag>copado-1.0</tag>
+    <tag>copado-1.00</tag>
   </scm>
   <repositories>
     <repository>
