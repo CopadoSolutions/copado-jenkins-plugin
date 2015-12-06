@@ -20,7 +20,6 @@ import net.sf.json.JSONObject;
 /**
  * CopadoTrigger
  *
- * @email help@copa.do
  */
 public class CopadoTrigger implements Callable<String> {
 
@@ -89,7 +88,7 @@ public class CopadoTrigger implements Callable<String> {
      *
      * @param url
      * @param apiEndPoint
-     * @return
+     * @return the status url to be called after the job has been started, or the status of an on going job
      */
     public String process(String url, final String apiEndPoint) {
     	log.println("");

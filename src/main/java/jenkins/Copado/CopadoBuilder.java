@@ -23,7 +23,6 @@ import org.kohsuke.stapler.DataBoundConstructor;
 /**
  * CopadoBuilder {@link Builder}.
  *
- * @email  help@copa.do
  */
 public class CopadoBuilder extends Builder {
 
