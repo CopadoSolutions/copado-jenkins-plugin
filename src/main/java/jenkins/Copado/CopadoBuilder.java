@@ -10,6 +10,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 import hudson.Launcher;
+import hudson.EnvVars;
 import hudson.Extension;
 import hudson.model.AbstractBuild;
 import hudson.model.BuildListener;
@@ -86,9 +87,20 @@ public class CopadoBuilder extends Builder {
     	logger.println("Webhook URL: " + webhookUrl);
     	logger.println("API key: " + api_key);
     	logger.println("Timeout: " + timeout);
+    	String payload = null;
+    	
+    	try{
+    		EnvVars env = build.getEnvironment(listener);
+            env.overrideAll(build.getBuildVariables());
+        	payload = env.get("payload");
+        	logger.println("Payload: " + payload);
+    	}
+    	catch(Exception e){
+    		e.printStackTrace();
+    	}
     	
         ExecutorService executorService = Executors.newSingleThreadExecutor();
-        Future<String> future = executorService.submit(new CopadoTrigger(logger, webhookUrl, api_key, stepName));
+        Future<String> future = executorService.submit(new CopadoTrigger(logger, webhookUrl, api_key, stepName, payload));
 
         try {
             String result = future.get(timeout, TimeUnit.SECONDS);

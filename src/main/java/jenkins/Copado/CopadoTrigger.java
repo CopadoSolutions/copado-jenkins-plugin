@@ -7,7 +7,9 @@ import java.io.UnsupportedEncodingException;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.net.URLDecoder;
 import java.net.URLEncoder;
+import java.nio.charset.Charset;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
@@ -34,15 +36,17 @@ public class CopadoTrigger implements Callable<String> {
     private String result;
     private String api_key;
     private String stepName;
+    private String payload;
 
     private PrintStream log;
     String resp = null;
 
-    public CopadoTrigger(PrintStream logger, String url, String api_key, String stepName) {
+    public CopadoTrigger(PrintStream logger, String url, String api_key, String stepName, String payload) {
         this.log = logger;
         this.url = url;
         this.api_key = api_key;
         this.stepName = stepName;
+        this.payload = payload;
         
         try {
 			API_HOST = new URL(url).getHost();
@@ -95,26 +99,9 @@ public class CopadoTrigger implements Callable<String> {
     	log.println("Process ("+apiEndPoint+") URL: "+ url);
         
         try {
-        	URL u = new URL(url);
-    		HttpURLConnection urlConnection = (HttpURLConnection) u.openConnection();
-    		urlConnection.connect();
-    		String status = String.format("Respnose Code - %d - %s", urlConnection.getResponseCode(), urlConnection.getResponseMessage());
-    		
-    		if (urlConnection.getResponseCode() <200 || urlConnection.getResponseCode()>=300){
-    			log.println("\nERROR: "+status);
-    			throw new Exception(status);
-    		}
-    		log.println(status);
-    		InputStream is = urlConnection.getInputStream();
-    		InputStreamReader isr = new InputStreamReader(is);
-
-    		int numCharsRead;
-    		char[] charArray = new char[1024];
-    		StringBuffer sb = new StringBuffer();
-    		while ((numCharsRead = isr.read(charArray)) > 0) {
-    			sb.append(charArray, 0, numCharsRead);
-    		}
-            String responseBody = sb.toString();
+        	if(payload == null)payload = "";
+        	//job status is always
+            String responseBody =  apiEndPoint.equals(JOB_STATUS)?getURL(url):postURL(url, URLDecoder.decode(payload,"UTF-8"));
             log.println("\n*** " + stepName + "\nData received: " + responseBody);
             result = parseJSON(responseBody, apiEndPoint);
         } catch (Exception e) {
@@ -161,4 +148,65 @@ public class CopadoTrigger implements Callable<String> {
     }
 
     private static final Logger LOGGER = Logger.getLogger(CopadoTrigger.class.getName());
+    
+    private String getURL(String uri) throws Exception{
+		log.println("Requesting URL "+ uri);
+		URL url = new URL(uri);
+		
+		
+		HttpURLConnection urlConnection = (HttpURLConnection)url.openConnection();
+		urlConnection.connect();
+		String status = String.format("Respnose Code - %d - %s", urlConnection.getResponseCode(), urlConnection.getResponseMessage());
+		
+		if (urlConnection.getResponseCode() <200 || urlConnection.getResponseCode()>=400){
+			log.println("ERROR: "+status);
+			throw new Exception(status);
+		}
+		log.println(status);
+		InputStream is = urlConnection.getInputStream();
+		InputStreamReader isr = new InputStreamReader(is);
+
+		int numCharsRead;
+		char[] charArray = new char[1024];
+		StringBuffer sb = new StringBuffer();
+		while ((numCharsRead = isr.read(charArray)) > 0) {
+			sb.append(charArray, 0, numCharsRead);
+		}
+		return sb.toString();
+	}
+    private String postURL(String uri, String body)throws Exception{
+		if(body==null)body="";
+		log.println("Post " + uri + " body = " + body);
+		byte[] postData       = body.getBytes( Charset.forName( "UTF-8" ));
+		int    postDataLength = postData.length;
+		String request        = uri;
+		URL    url            = new URL( request );
+		HttpURLConnection cox= (HttpURLConnection)url.openConnection();
+		cox.setDoOutput( true );
+		cox.setDoInput ( true );
+		cox.setInstanceFollowRedirects( false );
+		cox.setRequestProperty( "Content-Length", Integer.toString( postDataLength ));
+		cox.setUseCaches( false );
+		cox.getOutputStream().write(postData);
+		cox.getOutputStream().close();
+		cox.getOutputStream().flush();
+		
+		String status = String.format("Respnose Code - %d - %s", cox.getResponseCode(), cox.getResponseMessage());
+		if (cox.getResponseCode() < 200 || cox.getResponseCode()>=400){
+			log.println("ERROR: "+status);
+			throw new Exception(status);
+		}
+		log.println(status);
+		
+		InputStream is = cox.getInputStream();
+		InputStreamReader isr = new InputStreamReader(is);
+
+		int numCharsRead;
+		char[] charArray = new char[1024];
+		StringBuffer sb = new StringBuffer();
+		while ((numCharsRead = isr.read(charArray)) > 0) {
+			sb.append(charArray, 0, numCharsRead);
+		}
+		return sb.toString();
+	}
 }
