@@ -3,6 +3,7 @@ package jenkins.Copado;
 import java.io.PrintStream;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -10,6 +11,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 import hudson.Launcher;
+import hudson.Util;
 import hudson.EnvVars;
 import hudson.Extension;
 import hudson.model.AbstractBuild;
@@ -17,6 +19,7 @@ import hudson.model.BuildListener;
 import hudson.model.Result;
 import hudson.model.AbstractProject;
 import hudson.tasks.Builder;
+import hudson.util.VariableResolver;
 import hudson.tasks.BuildStepDescriptor;
 
 import org.kohsuke.stapler.DataBoundConstructor;
@@ -88,19 +91,30 @@ public class CopadoBuilder extends Builder {
     	logger.println("API key: " + api_key);
     	logger.println("Timeout: " + timeout);
     	String payload = null;
+    	String evaluatedWebhookUrl = null;
+    	String evaluatedStepName = null;
+    	String evaluatedApi_key = null;
     	
     	try{
+    		logger.println("*** Parsing Build Parameters ***");
     		EnvVars env = build.getEnvironment(listener);
             env.overrideAll(build.getBuildVariables());
         	payload = env.get("payload");
         	logger.println("Payload: " + payload);
+        	
+        	evaluatedWebhookUrl = evaluate(webhookUrl, build.getBuildVariableResolver(), env);
+        	logger.println("Evaluated Webhook URL: " + evaluatedWebhookUrl);
+        	evaluatedStepName = evaluate(stepName, build.getBuildVariableResolver(), env);
+        	logger.println("Evaluated Step Name: " + evaluatedStepName);
+        	evaluatedApi_key = evaluate(api_key, build.getBuildVariableResolver(), env);
+        	logger.println("Evaluated API Key: " + evaluatedApi_key);
     	}
     	catch(Exception e){
     		e.printStackTrace();
     	}
     	
         ExecutorService executorService = Executors.newSingleThreadExecutor();
-        Future<String> future = executorService.submit(new CopadoTrigger(logger, webhookUrl, api_key, stepName, payload));
+        Future<String> future = executorService.submit(new CopadoTrigger(logger, evaluatedWebhookUrl!=null?evaluatedWebhookUrl:webhookUrl, evaluatedApi_key!=null?evaluatedApi_key:api_key, evaluatedStepName!=null?evaluatedStepName:stepName, payload));
 
         try {
             String result = future.get(timeout, TimeUnit.SECONDS);
@@ -152,6 +166,9 @@ public class CopadoBuilder extends Builder {
             return DISPLAY_NAME;
         }
 
+    }
+    private String evaluate(String value, VariableResolver<String> vars, Map<String, String> env) {
+        return Util.replaceMacro(Util.replaceMacro(value, vars), env);
     }
 }
 
